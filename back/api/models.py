@@ -17,6 +17,7 @@ class Medico(models.Model):
     especialidade = models.CharField(max_length=100)
     crm = models.CharField(max_length=20, unique=True)
     ativo = models.BooleanField(default=True)
+    disponibilidade = models.TextField(blank=True, null=True, help_text="Ex: Seg a Sex, 08h as 18h")
 
     def __str__(self):
         return f"Dr(a). {self.usuario.get_full_name()} - {self.especialidade}"

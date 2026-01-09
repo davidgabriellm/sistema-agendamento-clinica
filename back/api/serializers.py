@@ -21,10 +21,14 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
 
 class MedicoSerializer(serializers.ModelSerializer):
+    # Campos calculados (Só leitura - buscam dados da tabela Usuario)
+    nome = serializers.CharField(source='usuario.get_full_name', read_only=True)
+    email = serializers.EmailField(source='usuario.email', read_only=True)
+    telefone = serializers.CharField(source='usuario.telefone', read_only=True)
+
     class Meta:
         model = Medico
-        fields = ['id', 'nome', 'especialidade', 'crm',
-                  'telefone', 'email', 'disponibilidade']
+        fields = ['id', 'usuario', 'nome', 'especialidade', 'crm', 'email', 'telefone', 'disponibilidade', 'ativo']
 
 
 class AgendamentoSerializer(serializers.ModelSerializer):
