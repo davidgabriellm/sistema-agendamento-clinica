@@ -131,3 +131,9 @@ CORS_ALLOW_ALL_ORIGINS = True # Para desenvolvimento (aceita tudo)
 # ]
 
 AUTH_USER_MODEL = 'api.Usuario'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
