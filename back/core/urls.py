@@ -23,6 +23,12 @@ from rest_framework_simplejwt.views import ( # type: ignore
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # Rotas de Autenticação (JWT)
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    # Rotas da nossa API (Usuarios, Medicos, Agendamentos)
+    # Tudo vai começar com 'api/' (ex: api/medicos/)
+    path('api/', include('api.urls')),
 ]
