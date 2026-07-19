@@ -17,15 +17,18 @@ from .models import (
     IndisponibilidadeDentista,
     ItemOrcamento,
     ItemPlanoTratamento,
+    Notificacao,
     Odontograma,
     Orcamento,
     Pagamento,
     Parcela,
     PlanoTratamento,
+    PreferenciaComunicacao,
     Procedimento,
     ProntuarioPaciente,
     RegistroOdontograma,
     SolicitacaoAnonimizacao,
+    TemplateMensagem,
     TermoConsentimento,
     Usuario,
 )
@@ -340,6 +343,46 @@ class SolicitacaoAnonimizacaoAdmin(admin.ModelAdmin):
     list_display = ('paciente', 'clinica', 'status', 'solicitado_em', 'processado_em', 'processado_por')
     list_filter = ('clinica', 'status', 'solicitado_em', 'processado_em')
     readonly_fields = ('clinica', 'paciente', 'solicitado_em')
+
+
+@admin.register(TemplateMensagem)
+class TemplateMensagemAdmin(admin.ModelAdmin):
+    list_display = ('nome', 'codigo', 'versao', 'canal', 'clinica', 'ativo', 'publicado_em')
+    list_filter = ('clinica', 'canal', 'ativo', 'publicado_em')
+    search_fields = ('nome', 'codigo', 'assunto')
+    readonly_fields = ('criado_por', 'criado_em', 'atualizado_em')
+
+
+@admin.register(Notificacao)
+class NotificacaoAdmin(admin.ModelAdmin):
+    list_display = ('paciente', 'clinica', 'canal', 'status', 'template', 'agendada_para', 'enviada_em')
+    list_filter = ('clinica', 'canal', 'status', 'template', 'agendada_para', 'enviada_em')
+    search_fields = ('paciente__nome_completo', 'assunto', 'mensagem')
+    readonly_fields = (
+        'clinica',
+        'paciente',
+        'agendamento',
+        'orcamento',
+        'template',
+        'canal',
+        'assunto',
+        'mensagem',
+        'status',
+        'erro',
+        'agendada_para',
+        'enviada_em',
+        'criada_por',
+        'criado_em',
+        'atualizado_em',
+    )
+
+
+@admin.register(PreferenciaComunicacao)
+class PreferenciaComunicacaoAdmin(admin.ModelAdmin):
+    list_display = ('paciente', 'aceita_whatsapp', 'aceita_email', 'aceita_sms', 'aceita_push', 'aceita_marketing')
+    list_filter = ('aceita_whatsapp', 'aceita_email', 'aceita_sms', 'aceita_push', 'aceita_marketing')
+    search_fields = ('paciente__nome_completo', 'paciente__cpf')
+    readonly_fields = ('paciente', 'criado_em', 'atualizado_em')
 
 
 admin.site.register(Endereco)

@@ -386,7 +386,12 @@ class MultiClinicaViewSetTest(APITestCase):
         self.client.force_authenticate(self.staff)
         response = self.client.post(
             reverse('clinica-list'),
-            {'nome': 'Clinica Nova', 'cnpj': '12.345.678/0001-99', 'telefone': '82911112222', 'email': 'nova@example.com'},
+            {
+                'nome': 'Clinica Nova',
+                'cnpj': '12.345.678/0001-99',
+                'telefone': '82911112222',
+                'email': 'nova@example.com',
+            },
             format='json',
         )
 
@@ -542,12 +547,28 @@ class ConfiguracoesComerciaisClinicaTest(APITestCase):
             duracao_padrao_consulta_minutos=30,
         )
         self.clinica_b = Clinica.objects.create(nome='Comercial Clinica B', slug='comercial-b')
-        self.staff = criar_usuario('comercial_staff', '70000000001', 'comercial.staff@example.com', tipo='ADMIN', is_staff=True)
-        self.paciente_a = criar_usuario('comercial_paciente_a', '70000000002', 'comercial.paciente.a@example.com', clinica=self.clinica_a)
-        self.paciente_b = criar_usuario('comercial_paciente_b', '70000000003', 'comercial.paciente.b@example.com', clinica=self.clinica_b)
-        self.usuario_dentista_a = criar_usuario('comercial_dentista_a', '70000000004', 'comercial.dentista.a@example.com', tipo='DENTISTA', clinica=self.clinica_a)
-        self.dentista_a = Dentista.objects.create(clinica=self.clinica_a, usuario=self.usuario_dentista_a, especialidade='Clinica geral', cro='44444-AL')
-        self.procedimento_a = Procedimento.objects.create(clinica=self.clinica_a, nome='Consulta comercial', duracao_minutos=30)
+        self.staff = criar_usuario(
+            'comercial_staff', '70000000001', 'comercial.staff@example.com', tipo='ADMIN', is_staff=True
+        )
+        self.paciente_a = criar_usuario(
+            'comercial_paciente_a', '70000000002', 'comercial.paciente.a@example.com', clinica=self.clinica_a
+        )
+        self.paciente_b = criar_usuario(
+            'comercial_paciente_b', '70000000003', 'comercial.paciente.b@example.com', clinica=self.clinica_b
+        )
+        self.usuario_dentista_a = criar_usuario(
+            'comercial_dentista_a',
+            '70000000004',
+            'comercial.dentista.a@example.com',
+            tipo='DENTISTA',
+            clinica=self.clinica_a,
+        )
+        self.dentista_a = Dentista.objects.create(
+            clinica=self.clinica_a, usuario=self.usuario_dentista_a, especialidade='Clinica geral', cro='44444-AL'
+        )
+        self.procedimento_a = Procedimento.objects.create(
+            clinica=self.clinica_a, nome='Consulta comercial', duracao_minutos=30
+        )
 
     def criar_agendamento_comercial(self, data_horario):
         return Agendamento.objects.create(
@@ -635,25 +656,35 @@ class ConfiguracoesComerciaisClinicaTest(APITestCase):
         self.client.force_authenticate(self.staff)
 
         self.assertEqual(
-            self.client.post(reverse('clinica-list'), {'nome': 'Slug Duplicado', 'slug': 'comercial-a'}, format='json').status_code,
-            status.HTTP_400_BAD_REQUEST,
-        )
-        self.assertEqual(
-            self.client.post(reverse('clinica-list'), {'nome': 'Timezone Ruim', 'slug': 'timezone-ruim', 'timezone': 'Brasil/Invalida'}, format='json').status_code,
-            status.HTTP_400_BAD_REQUEST,
-        )
-        self.assertEqual(
-            self.client.post(reverse('clinica-list'), {'nome': 'Antecedencia Ruim', 'slug': 'antecedencia-ruim', 'antecedencia_minima_cancelamento_horas': -1}, format='json').status_code,
-            status.HTTP_400_BAD_REQUEST,
-        )
-        self.assertEqual(
-            self.client.post(reverse('clinica-list'), {'nome': 'Duracao Ruim', 'slug': 'duracao-ruim', 'duracao_padrao_consulta_minutos': 0}, format='json').status_code,
+            self.client.post(
+                reverse('clinica-list'), {'nome': 'Slug Duplicado', 'slug': 'comercial-a'}, format='json'
+            ).status_code,
             status.HTTP_400_BAD_REQUEST,
         )
         self.assertEqual(
             self.client.post(
-                reverse('horario-funcionamento-list'),
-                {'clinica': self.clinica_a.pk, 'dia_semana': 0, 'horario_inicio': '18:00:00', 'horario_fim': '08:00:00'},
+                reverse('clinica-list'),
+                {'nome': 'Timezone Ruim', 'slug': 'timezone-ruim', 'timezone': 'Brasil/Invalida'},
+                format='json',
+            ).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse('clinica-list'),
+                {
+                    'nome': 'Antecedencia Ruim',
+                    'slug': 'antecedencia-ruim',
+                    'antecedencia_minima_cancelamento_horas': -1,
+                },
+                format='json',
+            ).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse('clinica-list'),
+                {'nome': 'Duracao Ruim', 'slug': 'duracao-ruim', 'duracao_padrao_consulta_minutos': 0},
                 format='json',
             ).status_code,
             status.HTTP_400_BAD_REQUEST,
@@ -661,7 +692,25 @@ class ConfiguracoesComerciaisClinicaTest(APITestCase):
         self.assertEqual(
             self.client.post(
                 reverse('horario-funcionamento-list'),
-                {'clinica': self.clinica_a.pk, 'dia_semana': 9, 'horario_inicio': '08:00:00', 'horario_fim': '18:00:00'},
+                {
+                    'clinica': self.clinica_a.pk,
+                    'dia_semana': 0,
+                    'horario_inicio': '18:00:00',
+                    'horario_fim': '08:00:00',
+                },
+                format='json',
+            ).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse('horario-funcionamento-list'),
+                {
+                    'clinica': self.clinica_a.pk,
+                    'dia_semana': 9,
+                    'horario_inicio': '08:00:00',
+                    'horario_fim': '18:00:00',
+                },
                 format='json',
             ).status_code,
             status.HTTP_400_BAD_REQUEST,
@@ -685,8 +734,12 @@ class ConfiguracoesComerciaisClinicaTest(APITestCase):
         self.assertEqual(response_horario.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_usuario_comum_ve_apenas_horarios_da_propria_clinica(self):
-        horario_a = HorarioFuncionamentoClinica.objects.create(clinica=self.clinica_a, dia_semana=0, horario_inicio=time(8, 0), horario_fim=time(18, 0))
-        horario_b = HorarioFuncionamentoClinica.objects.create(clinica=self.clinica_b, dia_semana=0, horario_inicio=time(8, 0), horario_fim=time(18, 0))
+        horario_a = HorarioFuncionamentoClinica.objects.create(
+            clinica=self.clinica_a, dia_semana=0, horario_inicio=time(8, 0), horario_fim=time(18, 0)
+        )
+        horario_b = HorarioFuncionamentoClinica.objects.create(
+            clinica=self.clinica_b, dia_semana=0, horario_inicio=time(8, 0), horario_fim=time(18, 0)
+        )
         self.client.force_authenticate(self.paciente_a)
 
         lista = self.client.get(reverse('horario-funcionamento-list'))
@@ -732,8 +785,12 @@ class ConfiguracoesComerciaisClinicaTest(APITestCase):
         self.assertIn('data_horario', response.data)
 
     def test_agendamento_terminando_apos_fechamento_retorna_400(self):
-        HorarioFuncionamentoClinica.objects.create(clinica=self.clinica_a, dia_semana=0, horario_inicio=time(8, 0), horario_fim=time(18, 0))
-        procedimento_longo = Procedimento.objects.create(clinica=self.clinica_a, nome='Procedimento longo', duracao_minutos=60)
+        HorarioFuncionamentoClinica.objects.create(
+            clinica=self.clinica_a, dia_semana=0, horario_inicio=time(8, 0), horario_fim=time(18, 0)
+        )
+        procedimento_longo = Procedimento.objects.create(
+            clinica=self.clinica_a, nome='Procedimento longo', duracao_minutos=60
+        )
         self.client.force_authenticate(self.paciente_a)
 
         response = self.client.post(
@@ -782,17 +839,43 @@ class BloqueiosIndisponibilidadesCadastroSlugTest(APITestCase):
     def setUp(self):
         self.clinica_a = Clinica.objects.create(nome='Sprint Sete A', slug='sprint-sete-a')
         self.clinica_b = Clinica.objects.create(nome='Sprint Sete B', slug='sprint-sete-b')
-        self.clinica_inativa = Clinica.objects.create(nome='Sprint Sete Inativa', slug='sprint-sete-inativa', ativa=False)
+        self.clinica_inativa = Clinica.objects.create(
+            nome='Sprint Sete Inativa', slug='sprint-sete-inativa', ativa=False
+        )
         criar_expediente(self.clinica_a, inicio=time(8, 0), fim=time(18, 0))
         criar_expediente(self.clinica_b, inicio=time(8, 0), fim=time(18, 0))
-        self.staff = criar_usuario('sprint7_staff', '80000000001', 'sprint7.staff@example.com', tipo='ADMIN', is_staff=True)
-        self.paciente_a = criar_usuario('sprint7_paciente_a', '80000000002', 'sprint7.paciente.a@example.com', clinica=self.clinica_a)
-        self.paciente_b = criar_usuario('sprint7_paciente_b', '80000000003', 'sprint7.paciente.b@example.com', clinica=self.clinica_b)
-        self.usuario_dentista_a = criar_usuario('sprint7_dentista_a', '80000000004', 'sprint7.dentista.a@example.com', tipo='DENTISTA', clinica=self.clinica_a)
-        self.usuario_dentista_b = criar_usuario('sprint7_dentista_b', '80000000005', 'sprint7.dentista.b@example.com', tipo='DENTISTA', clinica=self.clinica_b)
-        self.dentista_a = Dentista.objects.create(clinica=self.clinica_a, usuario=self.usuario_dentista_a, especialidade='Ortodontia', cro='77777-AL')
-        self.dentista_b = Dentista.objects.create(clinica=self.clinica_b, usuario=self.usuario_dentista_b, especialidade='Endodontia', cro='88888-AL')
-        self.procedimento_a = Procedimento.objects.create(clinica=self.clinica_a, nome='Consulta sprint 7', duracao_minutos=30)
+        self.staff = criar_usuario(
+            'sprint7_staff', '80000000001', 'sprint7.staff@example.com', tipo='ADMIN', is_staff=True
+        )
+        self.paciente_a = criar_usuario(
+            'sprint7_paciente_a', '80000000002', 'sprint7.paciente.a@example.com', clinica=self.clinica_a
+        )
+        self.paciente_b = criar_usuario(
+            'sprint7_paciente_b', '80000000003', 'sprint7.paciente.b@example.com', clinica=self.clinica_b
+        )
+        self.usuario_dentista_a = criar_usuario(
+            'sprint7_dentista_a',
+            '80000000004',
+            'sprint7.dentista.a@example.com',
+            tipo='DENTISTA',
+            clinica=self.clinica_a,
+        )
+        self.usuario_dentista_b = criar_usuario(
+            'sprint7_dentista_b',
+            '80000000005',
+            'sprint7.dentista.b@example.com',
+            tipo='DENTISTA',
+            clinica=self.clinica_b,
+        )
+        self.dentista_a = Dentista.objects.create(
+            clinica=self.clinica_a, usuario=self.usuario_dentista_a, especialidade='Ortodontia', cro='77777-AL'
+        )
+        self.dentista_b = Dentista.objects.create(
+            clinica=self.clinica_b, usuario=self.usuario_dentista_b, especialidade='Endodontia', cro='88888-AL'
+        )
+        self.procedimento_a = Procedimento.objects.create(
+            clinica=self.clinica_a, nome='Consulta sprint 7', duracao_minutos=30
+        )
 
     def payload_cadastro_slug(self, **overrides):
         payload = {
@@ -821,12 +904,23 @@ class BloqueiosIndisponibilidadesCadastroSlugTest(APITestCase):
 
         bloqueio = self.client.post(
             reverse('bloqueio-agenda-list'),
-            {'clinica': self.clinica_a.pk, 'inicio': inicio.isoformat(), 'fim': fim.isoformat(), 'motivo': 'Feriado local'},
+            {
+                'clinica': self.clinica_a.pk,
+                'inicio': inicio.isoformat(),
+                'fim': fim.isoformat(),
+                'motivo': 'Feriado local',
+            },
             format='json',
         )
         indisponibilidade = self.client.post(
             reverse('indisponibilidade-dentista-list'),
-            {'clinica': self.clinica_a.pk, 'dentista': self.dentista_a.pk, 'inicio': inicio.isoformat(), 'fim': fim.isoformat(), 'motivo': 'Ferias'},
+            {
+                'clinica': self.clinica_a.pk,
+                'dentista': self.dentista_a.pk,
+                'inicio': inicio.isoformat(),
+                'fim': fim.isoformat(),
+                'motivo': 'Ferias',
+            },
             format='json',
         )
 
@@ -861,12 +955,22 @@ class BloqueiosIndisponibilidadesCadastroSlugTest(APITestCase):
 
         intervalo_invalido = self.client.post(
             reverse('indisponibilidade-dentista-list'),
-            {'clinica': self.clinica_a.pk, 'dentista': self.dentista_a.pk, 'inicio': inicio.isoformat(), 'fim': inicio.isoformat()},
+            {
+                'clinica': self.clinica_a.pk,
+                'dentista': self.dentista_a.pk,
+                'inicio': inicio.isoformat(),
+                'fim': inicio.isoformat(),
+            },
             format='json',
         )
         dentista_outra_clinica = self.client.post(
             reverse('indisponibilidade-dentista-list'),
-            {'clinica': self.clinica_a.pk, 'dentista': self.dentista_b.pk, 'inicio': inicio.isoformat(), 'fim': (inicio + timedelta(hours=1)).isoformat()},
+            {
+                'clinica': self.clinica_a.pk,
+                'dentista': self.dentista_b.pk,
+                'inicio': inicio.isoformat(),
+                'fim': (inicio + timedelta(hours=1)).isoformat(),
+            },
             format='json',
         )
 
@@ -887,7 +991,12 @@ class BloqueiosIndisponibilidadesCadastroSlugTest(APITestCase):
         )
         indisponibilidade = self.client.post(
             reverse('indisponibilidade-dentista-list'),
-            {'clinica': self.clinica_b.pk, 'dentista': self.dentista_b.pk, 'inicio': inicio.isoformat(), 'fim': fim.isoformat()},
+            {
+                'clinica': self.clinica_b.pk,
+                'dentista': self.dentista_b.pk,
+                'inicio': inicio.isoformat(),
+                'fim': fim.isoformat(),
+            },
             format='json',
         )
 
@@ -896,16 +1005,26 @@ class BloqueiosIndisponibilidadesCadastroSlugTest(APITestCase):
 
     def test_usuario_comum_ve_apenas_bloqueios_e_indisponibilidades_da_propria_clinica(self):
         inicio = data_local_futura(self.clinica_a, hora=10)
-        bloqueio_a = BloqueioAgendaClinica.objects.create(clinica=self.clinica_a, inicio=inicio, fim=inicio + timedelta(hours=1))
-        bloqueio_b = BloqueioAgendaClinica.objects.create(clinica=self.clinica_b, inicio=inicio, fim=inicio + timedelta(hours=1))
-        indisponibilidade_a = IndisponibilidadeDentista.objects.create(clinica=self.clinica_a, dentista=self.dentista_a, inicio=inicio, fim=inicio + timedelta(hours=1))
-        indisponibilidade_b = IndisponibilidadeDentista.objects.create(clinica=self.clinica_b, dentista=self.dentista_b, inicio=inicio, fim=inicio + timedelta(hours=1))
+        bloqueio_a = BloqueioAgendaClinica.objects.create(
+            clinica=self.clinica_a, inicio=inicio, fim=inicio + timedelta(hours=1)
+        )
+        bloqueio_b = BloqueioAgendaClinica.objects.create(
+            clinica=self.clinica_b, inicio=inicio, fim=inicio + timedelta(hours=1)
+        )
+        indisponibilidade_a = IndisponibilidadeDentista.objects.create(
+            clinica=self.clinica_a, dentista=self.dentista_a, inicio=inicio, fim=inicio + timedelta(hours=1)
+        )
+        indisponibilidade_b = IndisponibilidadeDentista.objects.create(
+            clinica=self.clinica_b, dentista=self.dentista_b, inicio=inicio, fim=inicio + timedelta(hours=1)
+        )
 
         self.client.force_authenticate(self.paciente_a)
         bloqueios = self.client.get(reverse('bloqueio-agenda-list'))
         bloqueio_b_detail = self.client.get(reverse('bloqueio-agenda-detail', args=[bloqueio_b.pk]))
         indisponibilidades = self.client.get(reverse('indisponibilidade-dentista-list'))
-        indisponibilidade_b_detail = self.client.get(reverse('indisponibilidade-dentista-detail', args=[indisponibilidade_b.pk]))
+        indisponibilidade_b_detail = self.client.get(
+            reverse('indisponibilidade-dentista-detail', args=[indisponibilidade_b.pk])
+        )
 
         self.assertEqual(bloqueios.status_code, status.HTTP_200_OK)
         self.assertEqual(bloqueios.data['count'], 1)
@@ -918,18 +1037,26 @@ class BloqueiosIndisponibilidadesCadastroSlugTest(APITestCase):
 
     def test_agendamento_dentro_ou_sobreposto_a_bloqueio_ativo_retorna_409(self):
         inicio = data_local_futura(self.clinica_a, hora=10)
-        BloqueioAgendaClinica.objects.create(clinica=self.clinica_a, inicio=inicio, fim=inicio + timedelta(hours=2), motivo='Manutencao')
+        BloqueioAgendaClinica.objects.create(
+            clinica=self.clinica_a, inicio=inicio, fim=inicio + timedelta(hours=2), motivo='Manutencao'
+        )
         self.client.force_authenticate(self.paciente_a)
 
-        dentro = self.client.post(reverse('agendamento-list'), self.payload_agendamento(inicio + timedelta(minutes=30)), format='json')
-        sobreposto = self.client.post(reverse('agendamento-list'), self.payload_agendamento(inicio - timedelta(minutes=15)), format='json')
+        dentro = self.client.post(
+            reverse('agendamento-list'), self.payload_agendamento(inicio + timedelta(minutes=30)), format='json'
+        )
+        sobreposto = self.client.post(
+            reverse('agendamento-list'), self.payload_agendamento(inicio - timedelta(minutes=15)), format='json'
+        )
 
         self.assertEqual(dentro.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(sobreposto.status_code, status.HTTP_409_CONFLICT)
 
     def test_bloqueio_inativo_nao_impede_agendamento(self):
         inicio = data_local_futura(self.clinica_a, hora=10)
-        BloqueioAgendaClinica.objects.create(clinica=self.clinica_a, inicio=inicio, fim=inicio + timedelta(hours=1), ativo=False)
+        BloqueioAgendaClinica.objects.create(
+            clinica=self.clinica_a, inicio=inicio, fim=inicio + timedelta(hours=1), ativo=False
+        )
         self.client.force_authenticate(self.paciente_a)
 
         response = self.client.post(reverse('agendamento-list'), self.payload_agendamento(inicio), format='json')
@@ -938,18 +1065,30 @@ class BloqueiosIndisponibilidadesCadastroSlugTest(APITestCase):
 
     def test_indisponibilidade_ativa_ou_parcial_retorna_409(self):
         inicio = data_local_futura(self.clinica_a, hora=10)
-        IndisponibilidadeDentista.objects.create(clinica=self.clinica_a, dentista=self.dentista_a, inicio=inicio, fim=inicio + timedelta(hours=2))
+        IndisponibilidadeDentista.objects.create(
+            clinica=self.clinica_a, dentista=self.dentista_a, inicio=inicio, fim=inicio + timedelta(hours=2)
+        )
         self.client.force_authenticate(self.paciente_a)
 
-        dentro = self.client.post(reverse('agendamento-list'), self.payload_agendamento(inicio + timedelta(minutes=30)), format='json')
-        parcial = self.client.post(reverse('agendamento-list'), self.payload_agendamento(inicio - timedelta(minutes=15)), format='json')
+        dentro = self.client.post(
+            reverse('agendamento-list'), self.payload_agendamento(inicio + timedelta(minutes=30)), format='json'
+        )
+        parcial = self.client.post(
+            reverse('agendamento-list'), self.payload_agendamento(inicio - timedelta(minutes=15)), format='json'
+        )
 
         self.assertEqual(dentro.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(parcial.status_code, status.HTTP_409_CONFLICT)
 
     def test_indisponibilidade_inativa_nao_impede_agendamento(self):
         inicio = data_local_futura(self.clinica_a, hora=10)
-        IndisponibilidadeDentista.objects.create(clinica=self.clinica_a, dentista=self.dentista_a, inicio=inicio, fim=inicio + timedelta(hours=1), ativo=False)
+        IndisponibilidadeDentista.objects.create(
+            clinica=self.clinica_a,
+            dentista=self.dentista_a,
+            inicio=inicio,
+            fim=inicio + timedelta(hours=1),
+            ativo=False,
+        )
         self.client.force_authenticate(self.paciente_a)
 
         response = self.client.post(reverse('agendamento-list'), self.payload_agendamento(inicio), format='json')
@@ -982,11 +1121,33 @@ class BloqueiosIndisponibilidadesCadastroSlugTest(APITestCase):
     def test_cadastro_publico_por_slug_valida_campos_e_contexto(self):
         criar_usuario('slug_existente', '98765432100', 'existente.slug@example.com', clinica=self.clinica_a)
 
-        sem_cpf = self.client.post('/api/v1/clinicas/sprint-sete-a/pacientes/', self.payload_cadastro_slug(cpf=''), format='json')
-        cpf_duplicado = self.client.post('/api/v1/clinicas/sprint-sete-a/pacientes/', self.payload_cadastro_slug(username='cpf_dup', email='cpf.dup@example.com'), format='json')
-        email_duplicado = self.client.post('/api/v1/clinicas/sprint-sete-a/pacientes/', self.payload_cadastro_slug(username='email_dup', cpf='11122233344', email='existente.slug@example.com'), format='json')
-        slug_inexistente = self.client.post('/api/v1/clinicas/slug-inexistente/pacientes/', self.payload_cadastro_slug(username='slug_inexistente', cpf='11122233345', email='slug.inexistente@example.com'), format='json')
-        clinica_inativa = self.client.post('/api/v1/clinicas/sprint-sete-inativa/pacientes/', self.payload_cadastro_slug(username='clinica_inativa', cpf='11122233346', email='clinica.inativa@example.com'), format='json')
+        sem_cpf = self.client.post(
+            '/api/v1/clinicas/sprint-sete-a/pacientes/', self.payload_cadastro_slug(cpf=''), format='json'
+        )
+        cpf_duplicado = self.client.post(
+            '/api/v1/clinicas/sprint-sete-a/pacientes/',
+            self.payload_cadastro_slug(username='cpf_dup', email='cpf.dup@example.com'),
+            format='json',
+        )
+        email_duplicado = self.client.post(
+            '/api/v1/clinicas/sprint-sete-a/pacientes/',
+            self.payload_cadastro_slug(username='email_dup', cpf='11122233344', email='existente.slug@example.com'),
+            format='json',
+        )
+        slug_inexistente = self.client.post(
+            '/api/v1/clinicas/slug-inexistente/pacientes/',
+            self.payload_cadastro_slug(
+                username='slug_inexistente', cpf='11122233345', email='slug.inexistente@example.com'
+            ),
+            format='json',
+        )
+        clinica_inativa = self.client.post(
+            '/api/v1/clinicas/sprint-sete-inativa/pacientes/',
+            self.payload_cadastro_slug(
+                username='clinica_inativa', cpf='11122233346', email='clinica.inativa@example.com'
+            ),
+            format='json',
+        )
 
         self.assertEqual(sem_cpf.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('cpf', sem_cpf.data)
@@ -1004,9 +1165,15 @@ class ConviteCadastroPacienteViewSetTest(APITestCase):
         self.clinica_a = Clinica.objects.create(nome='Convites Clinica A')
         self.clinica_b = Clinica.objects.create(nome='Convites Clinica B')
         self.clinica_inativa = Clinica.objects.create(nome='Convites Clinica Inativa', ativa=False)
-        self.staff = criar_usuario('convite_staff', '70000000001', 'convite.staff@example.com', tipo='ADMIN', is_staff=True)
-        self.usuario_a = criar_usuario('convite_usuario_a', '70000000002', 'convite.usuario.a@example.com', clinica=self.clinica_a)
-        self.usuario_b = criar_usuario('convite_usuario_b', '70000000003', 'convite.usuario.b@example.com', clinica=self.clinica_b)
+        self.staff = criar_usuario(
+            'convite_staff', '70000000001', 'convite.staff@example.com', tipo='ADMIN', is_staff=True
+        )
+        self.usuario_a = criar_usuario(
+            'convite_usuario_a', '70000000002', 'convite.usuario.a@example.com', clinica=self.clinica_a
+        )
+        self.usuario_b = criar_usuario(
+            'convite_usuario_b', '70000000003', 'convite.usuario.b@example.com', clinica=self.clinica_b
+        )
         self.lista_url = reverse('convite-paciente-list')
 
     def payload_convite(self, **overrides):
@@ -1087,9 +1254,23 @@ class ConviteCadastroPacienteViewSetTest(APITestCase):
         criar_usuario('convite_existente', '70000000005', 'existente.convite@example.com')
 
         sem_cpf = self.client.post(self.url_cadastro(convite), self.payload_cadastro(cpf=''), format='json')
-        cpf_duplicado = self.client.post(self.url_cadastro(convite), self.payload_cadastro(username='cpf_duplicado', cpf='70000000005'), format='json')
-        email_duplicado = self.client.post(self.url_cadastro(convite), self.payload_cadastro(username='email_duplicado', cpf='70000000006', email='existente.convite@example.com'), format='json')
-        senha_invalida = self.client.post(self.url_cadastro(convite), self.payload_cadastro(username='senha_invalida', cpf='70000000007', email='senha.invalida@example.com', password='12345678'), format='json')
+        cpf_duplicado = self.client.post(
+            self.url_cadastro(convite),
+            self.payload_cadastro(username='cpf_duplicado', cpf='70000000005'),
+            format='json',
+        )
+        email_duplicado = self.client.post(
+            self.url_cadastro(convite),
+            self.payload_cadastro(username='email_duplicado', cpf='70000000006', email='existente.convite@example.com'),
+            format='json',
+        )
+        senha_invalida = self.client.post(
+            self.url_cadastro(convite),
+            self.payload_cadastro(
+                username='senha_invalida', cpf='70000000007', email='senha.invalida@example.com', password='12345678'
+            ),
+            format='json',
+        )
 
         for response in (sem_cpf, cpf_duplicado, email_duplicado, senha_invalida):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -1101,10 +1282,14 @@ class ConviteCadastroPacienteViewSetTest(APITestCase):
         inativo = self.criar_convite(email_destino='inativo@example.com', ativo=False)
         clinica_inativa = self.criar_convite(clinica=self.clinica_inativa, email_destino='clinica.inativa@example.com')
 
-        inexistente = self.client.post('/api/v1/convites-pacientes/token-inexistente/cadastrar/', self.payload_cadastro(), format='json')
+        inexistente = self.client.post(
+            '/api/v1/convites-pacientes/token-inexistente/cadastrar/', self.payload_cadastro(), format='json'
+        )
         expirado_response = self.client.post(self.url_cadastro(expirado), self.payload_cadastro(), format='json')
         inativo_response = self.client.post(self.url_cadastro(inativo), self.payload_cadastro(), format='json')
-        clinica_inativa_response = self.client.post(self.url_cadastro(clinica_inativa), self.payload_cadastro(), format='json')
+        clinica_inativa_response = self.client.post(
+            self.url_cadastro(clinica_inativa), self.payload_cadastro(), format='json'
+        )
 
         self.assertEqual(inexistente.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(expirado_response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -1116,7 +1301,11 @@ class ConviteCadastroPacienteViewSetTest(APITestCase):
 
         inexistente = self.client.post(self.lista_url, self.payload_convite(clinica=999999), format='json')
         inativa = self.client.post(self.lista_url, self.payload_convite(clinica=self.clinica_inativa.pk), format='json')
-        expirada = self.client.post(self.lista_url, self.payload_convite(expira_em=(timezone.now() - timedelta(minutes=1)).isoformat()), format='json')
+        expirada = self.client.post(
+            self.lista_url,
+            self.payload_convite(expira_em=(timezone.now() - timedelta(minutes=1)).isoformat()),
+            format='json',
+        )
 
         self.assertEqual(inexistente.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(inativa.status_code, status.HTTP_400_BAD_REQUEST)
@@ -1128,7 +1317,9 @@ class ConviteCadastroPacienteViewSetTest(APITestCase):
         self.client.force_authenticate(self.usuario_a)
 
         criacao = self.client.post(self.lista_url, self.payload_convite(clinica=self.clinica_b.pk), format='json')
-        alteracao = self.client.patch(reverse('convite-paciente-detail', kwargs={'token': convite_a.token}), {'ativo': False}, format='json')
+        alteracao = self.client.patch(
+            reverse('convite-paciente-detail', kwargs={'token': convite_a.token}), {'ativo': False}, format='json'
+        )
         listagem = self.client.get(self.lista_url)
         detalhe_outra_clinica = self.client.get(reverse('convite-paciente-detail', kwargs={'token': convite_b.token}))
 
@@ -1165,23 +1356,49 @@ class AgendaFluxoViewSetTest(APITestCase):
         self.clinica_b = Clinica.objects.create(nome='Agenda Clinica B')
         criar_expediente(self.clinica_a)
         criar_expediente(self.clinica_b)
-        self.staff = criar_usuario('agenda_staff', '60000000001', 'agenda.staff@example.com', tipo='ADMIN', is_staff=True)
-        self.paciente_a = criar_usuario('agenda_paciente_a', '60000000002', 'agenda.paciente.a@example.com', clinica=self.clinica_a)
-        self.paciente_b = criar_usuario('agenda_paciente_b', '60000000003', 'agenda.paciente.b@example.com', clinica=self.clinica_b)
-        self.usuario_dentista_a = criar_usuario('agenda_dentista_a', '60000000004', 'agenda.dentista.a@example.com', tipo='DENTISTA', clinica=self.clinica_a)
-        self.usuario_dentista_b = criar_usuario('agenda_dentista_b', '60000000005', 'agenda.dentista.b@example.com', tipo='DENTISTA', clinica=self.clinica_b)
-        self.dentista_a = Dentista.objects.create(clinica=self.clinica_a, usuario=self.usuario_dentista_a, especialidade='Ortodontia', cro='11111-AL')
-        self.dentista_b = Dentista.objects.create(clinica=self.clinica_b, usuario=self.usuario_dentista_b, especialidade='Endodontia', cro='22222-AL')
+        self.staff = criar_usuario(
+            'agenda_staff', '60000000001', 'agenda.staff@example.com', tipo='ADMIN', is_staff=True
+        )
+        self.paciente_a = criar_usuario(
+            'agenda_paciente_a', '60000000002', 'agenda.paciente.a@example.com', clinica=self.clinica_a
+        )
+        self.paciente_b = criar_usuario(
+            'agenda_paciente_b', '60000000003', 'agenda.paciente.b@example.com', clinica=self.clinica_b
+        )
+        self.usuario_dentista_a = criar_usuario(
+            'agenda_dentista_a', '60000000004', 'agenda.dentista.a@example.com', tipo='DENTISTA', clinica=self.clinica_a
+        )
+        self.usuario_dentista_b = criar_usuario(
+            'agenda_dentista_b', '60000000005', 'agenda.dentista.b@example.com', tipo='DENTISTA', clinica=self.clinica_b
+        )
+        self.dentista_a = Dentista.objects.create(
+            clinica=self.clinica_a, usuario=self.usuario_dentista_a, especialidade='Ortodontia', cro='11111-AL'
+        )
+        self.dentista_b = Dentista.objects.create(
+            clinica=self.clinica_b, usuario=self.usuario_dentista_b, especialidade='Endodontia', cro='22222-AL'
+        )
         self.dentista_inativo = Dentista.objects.create(
             clinica=self.clinica_a,
-            usuario=criar_usuario('agenda_dentista_inativo', '60000000006', 'agenda.inativo@example.com', tipo='DENTISTA', clinica=self.clinica_a),
+            usuario=criar_usuario(
+                'agenda_dentista_inativo',
+                '60000000006',
+                'agenda.inativo@example.com',
+                tipo='DENTISTA',
+                clinica=self.clinica_a,
+            ),
             especialidade='Periodontia',
             cro='33333-AL',
             ativo=False,
         )
-        self.procedimento_a = Procedimento.objects.create(clinica=self.clinica_a, nome='Limpeza agenda', duracao_minutos=30)
-        self.procedimento_b = Procedimento.objects.create(clinica=self.clinica_b, nome='Clareamento agenda', duracao_minutos=45)
-        self.procedimento_inativo = Procedimento.objects.create(clinica=self.clinica_a, nome='Inativo agenda', duracao_minutos=30, ativo=False)
+        self.procedimento_a = Procedimento.objects.create(
+            clinica=self.clinica_a, nome='Limpeza agenda', duracao_minutos=30
+        )
+        self.procedimento_b = Procedimento.objects.create(
+            clinica=self.clinica_b, nome='Clareamento agenda', duracao_minutos=45
+        )
+        self.procedimento_inativo = Procedimento.objects.create(
+            clinica=self.clinica_a, nome='Inativo agenda', duracao_minutos=30, ativo=False
+        )
 
     def futuro(self, dias=20, horas=0, minutos=0):
         return data_local_futura(self.clinica_a, dias=dias, hora=10, minuto=0) + timedelta(hours=horas, minutes=minutos)
@@ -1225,7 +1442,9 @@ class AgendaFluxoViewSetTest(APITestCase):
         self.client.force_authenticate(self.staff)
         response = self.client.post(
             '/api/v1/agendamentos/',
-            self.payload_agendamento(clinica=self.clinica_a.pk, paciente=self.paciente_a.pk, data_horario=self.futuro(dias=21).isoformat()),
+            self.payload_agendamento(
+                clinica=self.clinica_a.pk, paciente=self.paciente_a.pk, data_horario=self.futuro(dias=21).isoformat()
+            ),
             format='json',
         )
 
@@ -1235,21 +1454,37 @@ class AgendaFluxoViewSetTest(APITestCase):
     def test_acoes_validas_alteram_status(self):
         agendamento = self.criar_agendamento()
         self.client.force_authenticate(self.paciente_a)
-        self.assertEqual(self.client.post(reverse('agendamento-cancelar', args=[agendamento.pk])).data['status'], Agendamento.STATUS_CANCELADA)
+        self.assertEqual(
+            self.client.post(reverse('agendamento-cancelar', args=[agendamento.pk])).data['status'],
+            Agendamento.STATUS_CANCELADA,
+        )
 
         agendamento = self.criar_agendamento(data_horario=self.futuro(dias=31))
         self.client.force_authenticate(self.usuario_dentista_a)
-        self.assertEqual(self.client.post(reverse('agendamento-confirmar', args=[agendamento.pk])).data['status'], Agendamento.STATUS_CONFIRMADA)
-        self.assertEqual(self.client.post(reverse('agendamento-concluir', args=[agendamento.pk])).data['status'], Agendamento.STATUS_CONCLUIDA)
+        self.assertEqual(
+            self.client.post(reverse('agendamento-confirmar', args=[agendamento.pk])).data['status'],
+            Agendamento.STATUS_CONFIRMADA,
+        )
+        self.assertEqual(
+            self.client.post(reverse('agendamento-concluir', args=[agendamento.pk])).data['status'],
+            Agendamento.STATUS_CONCLUIDA,
+        )
 
         agendamento = self.criar_agendamento(data_horario=self.futuro(dias=32))
-        self.assertEqual(self.client.post(reverse('agendamento-marcar-falta', args=[agendamento.pk])).data['status'], Agendamento.STATUS_NAO_COMPARECEU)
+        self.assertEqual(
+            self.client.post(reverse('agendamento-marcar-falta', args=[agendamento.pk])).data['status'],
+            Agendamento.STATUS_NAO_COMPARECEU,
+        )
 
     def test_reagendamento_valido_altera_data_hora(self):
         agendamento = self.criar_agendamento()
         nova_data = self.futuro(dias=40)
         self.client.force_authenticate(self.paciente_a)
-        response = self.client.post(reverse('agendamento-reagendar', args=[agendamento.pk]), {'data_horario': nova_data.isoformat()}, format='json')
+        response = self.client.post(
+            reverse('agendamento-reagendar', args=[agendamento.pk]),
+            {'data_horario': nova_data.isoformat()},
+            format='json',
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         agendamento.refresh_from_db()
@@ -1257,33 +1492,98 @@ class AgendaFluxoViewSetTest(APITestCase):
 
     def test_campos_invalidos_retornam_400(self):
         self.client.force_authenticate(self.paciente_a)
-        self.assertEqual(self.client.post('/api/v1/agendamentos/', self.payload_agendamento(dentista=None), format='json').status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.client.post('/api/v1/agendamentos/', {'dentista': self.dentista_a.pk, 'procedimento_ref': self.procedimento_a.pk}, format='json').status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.client.post('/api/v1/agendamentos/', self.payload_agendamento(data_horario=(timezone.now() - timedelta(days=1)).isoformat()), format='json').status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.client.post('/api/v1/agendamentos/', self.payload_agendamento(dentista=999999), format='json').status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.client.post('/api/v1/agendamentos/', self.payload_agendamento(procedimento_ref=999999), format='json').status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.client.post('/api/v1/agendamentos/', self.payload_agendamento(status='INVALIDO'), format='json').status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.client.post(reverse('agendamento-reagendar', args=[self.criar_agendamento().pk]), {}, format='json').status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self.client.post(
+                '/api/v1/agendamentos/', self.payload_agendamento(dentista=None), format='json'
+            ).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(
+                '/api/v1/agendamentos/',
+                {'dentista': self.dentista_a.pk, 'procedimento_ref': self.procedimento_a.pk},
+                format='json',
+            ).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(
+                '/api/v1/agendamentos/',
+                self.payload_agendamento(data_horario=(timezone.now() - timedelta(days=1)).isoformat()),
+                format='json',
+            ).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(
+                '/api/v1/agendamentos/', self.payload_agendamento(dentista=999999), format='json'
+            ).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(
+                '/api/v1/agendamentos/', self.payload_agendamento(procedimento_ref=999999), format='json'
+            ).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(
+                '/api/v1/agendamentos/', self.payload_agendamento(status='INVALIDO'), format='json'
+            ).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse('agendamento-reagendar', args=[self.criar_agendamento().pk]), {}, format='json'
+            ).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
 
     def test_dentista_ou_procedimento_inativo_retornam_400(self):
         self.client.force_authenticate(self.paciente_a)
-        self.assertEqual(self.client.post('/api/v1/agendamentos/', self.payload_agendamento(dentista=self.dentista_inativo.pk), format='json').status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.client.post('/api/v1/agendamentos/', self.payload_agendamento(procedimento_ref=self.procedimento_inativo.pk), format='json').status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self.client.post(
+                '/api/v1/agendamentos/', self.payload_agendamento(dentista=self.dentista_inativo.pk), format='json'
+            ).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(
+                '/api/v1/agendamentos/',
+                self.payload_agendamento(procedimento_ref=self.procedimento_inativo.pk),
+                format='json',
+            ).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
 
     def test_paciente_nao_executa_acoes_profissionais(self):
         agendamento = self.criar_agendamento()
         self.client.force_authenticate(self.paciente_a)
 
-        self.assertEqual(self.client.post(reverse('agendamento-confirmar', args=[agendamento.pk])).status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.client.post(reverse('agendamento-concluir', args=[agendamento.pk])).status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.client.post(reverse('agendamento-marcar-falta', args=[agendamento.pk])).status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            self.client.post(reverse('agendamento-confirmar', args=[agendamento.pk])).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        self.assertEqual(
+            self.client.post(reverse('agendamento-concluir', args=[agendamento.pk])).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        self.assertEqual(
+            self.client.post(reverse('agendamento-marcar-falta', args=[agendamento.pk])).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
 
     def test_patch_generico_nao_troca_campos_sensiveis(self):
         agendamento = self.criar_agendamento()
         self.client.force_authenticate(self.paciente_a)
         response = self.client.patch(
             reverse('agendamento-detail', args=[agendamento.pk]),
-            {'status': Agendamento.STATUS_CONCLUIDA, 'dentista': self.dentista_b.pk, 'paciente': self.paciente_b.pk, 'clinica': self.clinica_b.pk},
+            {
+                'status': Agendamento.STATUS_CONCLUIDA,
+                'dentista': self.dentista_b.pk,
+                'paciente': self.paciente_b.pk,
+                'clinica': self.clinica_b.pk,
+            },
             format='json',
         )
 
@@ -1293,7 +1593,9 @@ class AgendaFluxoViewSetTest(APITestCase):
         self.assertEqual(agendamento.dentista_id, self.dentista_a.id)
 
     def test_acesso_indevido_retorna_404(self):
-        agendamento_outro_paciente = self.criar_agendamento(paciente=criar_usuario('agenda_outro', '60000000007', 'agenda.outro@example.com', clinica=self.clinica_a))
+        agendamento_outro_paciente = self.criar_agendamento(
+            paciente=criar_usuario('agenda_outro', '60000000007', 'agenda.outro@example.com', clinica=self.clinica_a)
+        )
         agendamento_b = self.criar_agendamento(
             clinica=self.clinica_b,
             dentista=self.dentista_b,
@@ -1304,18 +1606,36 @@ class AgendaFluxoViewSetTest(APITestCase):
         )
 
         self.client.force_authenticate(self.paciente_a)
-        self.assertEqual(self.client.get(reverse('agendamento-detail', args=[agendamento_outro_paciente.pk])).status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.client.post(reverse('agendamento-cancelar', args=[agendamento_outro_paciente.pk])).status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            self.client.get(reverse('agendamento-detail', args=[agendamento_outro_paciente.pk])).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.assertEqual(
+            self.client.post(reverse('agendamento-cancelar', args=[agendamento_outro_paciente.pk])).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
 
         self.client.force_authenticate(self.usuario_dentista_a)
-        self.assertEqual(self.client.get(reverse('agendamento-detail', args=[agendamento_b.pk])).status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.client.post(reverse('agendamento-reagendar', args=[agendamento_b.pk]), {'data_horario': self.futuro(dias=34).isoformat()}, format='json').status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            self.client.get(reverse('agendamento-detail', args=[agendamento_b.pk])).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse('agendamento-reagendar', args=[agendamento_b.pk]),
+                {'data_horario': self.futuro(dias=34).isoformat()},
+                format='json',
+            ).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
 
     def test_payload_nao_burla_clinica_ou_paciente(self):
         self.client.force_authenticate(self.paciente_a)
         response = self.client.post(
             '/api/v1/agendamentos/',
-            self.payload_agendamento(clinica=self.clinica_b.pk, paciente=self.paciente_b.pk, data_horario=self.futuro(dias=35).isoformat()),
+            self.payload_agendamento(
+                clinica=self.clinica_b.pk, paciente=self.paciente_b.pk, data_horario=self.futuro(dias=35).isoformat()
+            ),
             format='json',
         )
 
@@ -1329,8 +1649,14 @@ class AgendaFluxoViewSetTest(APITestCase):
         self.criar_agendamento(data_horario=inicio, duracao_minutos=60)
         self.client.force_authenticate(self.paciente_a)
 
-        conflito_exato = self.client.post('/api/v1/agendamentos/', self.payload_agendamento(data_horario=inicio.isoformat()), format='json')
-        sobreposicao = self.client.post('/api/v1/agendamentos/', self.payload_agendamento(data_horario=(inicio + timedelta(minutes=30)).isoformat()), format='json')
+        conflito_exato = self.client.post(
+            '/api/v1/agendamentos/', self.payload_agendamento(data_horario=inicio.isoformat()), format='json'
+        )
+        sobreposicao = self.client.post(
+            '/api/v1/agendamentos/',
+            self.payload_agendamento(data_horario=(inicio + timedelta(minutes=30)).isoformat()),
+            format='json',
+        )
 
         self.assertEqual(conflito_exato.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(sobreposicao.status_code, status.HTTP_409_CONFLICT)
@@ -1340,7 +1666,9 @@ class AgendaFluxoViewSetTest(APITestCase):
         self.criar_agendamento(data_horario=inicio, status=Agendamento.STATUS_CANCELADA)
         self.client.force_authenticate(self.paciente_a)
 
-        response = self.client.post('/api/v1/agendamentos/', self.payload_agendamento(data_horario=inicio.isoformat()), format='json')
+        response = self.client.post(
+            '/api/v1/agendamentos/', self.payload_agendamento(data_horario=inicio.isoformat()), format='json'
+        )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -1349,6 +1677,15 @@ class AgendaFluxoViewSetTest(APITestCase):
         cancelado = self.criar_agendamento(data_horario=self.futuro(dias=61), status=Agendamento.STATUS_CANCELADA)
         self.client.force_authenticate(self.usuario_dentista_a)
 
-        self.assertEqual(self.client.post(reverse('agendamento-cancelar', args=[concluido.pk])).status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.client.post(reverse('agendamento-concluir', args=[cancelado.pk])).status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.client.post(reverse('agendamento-confirmar', args=[cancelado.pk])).status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self.client.post(reverse('agendamento-cancelar', args=[concluido.pk])).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(reverse('agendamento-concluir', args=[cancelado.pk])).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(
+            self.client.post(reverse('agendamento-confirmar', args=[cancelado.pk])).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )

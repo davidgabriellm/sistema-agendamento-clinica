@@ -26,15 +26,18 @@ from .models import (
     IndisponibilidadeDentista,
     ItemOrcamento,
     ItemPlanoTratamento,
+    Notificacao,
     Odontograma,
     Orcamento,
     Pagamento,
     Parcela,
     PlanoTratamento,
+    PreferenciaComunicacao,
     Procedimento,
     ProntuarioPaciente,
     RegistroOdontograma,
     SolicitacaoAnonimizacao,
+    TemplateMensagem,
     TermoConsentimento,
     Usuario,
 )
@@ -1080,3 +1083,75 @@ class SolicitacaoAnonimizacaoSerializer(serializers.ModelSerializer):
         model = SolicitacaoAnonimizacao
         fields = ['id', 'clinica', 'paciente', 'motivo', 'status', 'solicitado_em', 'processado_em', 'processado_por']
         read_only_fields = ['id', 'clinica', 'paciente', 'status', 'solicitado_em', 'processado_em', 'processado_por']
+
+
+class TemplateMensagemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TemplateMensagem
+        fields = [
+            'id',
+            'clinica',
+            'nome',
+            'codigo',
+            'canal',
+            'versao',
+            'assunto',
+            'corpo',
+            'ativo',
+            'publicado_em',
+            'criado_por',
+            'criado_em',
+            'atualizado_em',
+        ]
+        read_only_fields = ['id', 'criado_por', 'criado_em', 'atualizado_em']
+
+
+class NotificacaoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notificacao
+        fields = [
+            'id',
+            'clinica',
+            'paciente',
+            'agendamento',
+            'orcamento',
+            'template',
+            'canal',
+            'assunto',
+            'mensagem',
+            'status',
+            'erro',
+            'agendada_para',
+            'enviada_em',
+            'criada_por',
+            'criado_em',
+            'atualizado_em',
+        ]
+        read_only_fields = [
+            'id',
+            'clinica',
+            'paciente',
+            'status',
+            'erro',
+            'enviada_em',
+            'criada_por',
+            'criado_em',
+            'atualizado_em',
+        ]
+
+
+class PreferenciaComunicacaoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PreferenciaComunicacao
+        fields = [
+            'id',
+            'paciente',
+            'aceita_whatsapp',
+            'aceita_email',
+            'aceita_sms',
+            'aceita_push',
+            'aceita_marketing',
+            'criado_em',
+            'atualizado_em',
+        ]
+        read_only_fields = ['id', 'paciente', 'criado_em', 'atualizado_em']

@@ -25,15 +25,18 @@ from .models import (
     IndisponibilidadeDentista,
     ItemOrcamento,
     ItemPlanoTratamento,
+    Notificacao,
     Odontograma,
     Orcamento,
     Pagamento,
     Parcela,
     PlanoTratamento,
+    PreferenciaComunicacao,
     Procedimento,
     ProntuarioPaciente,
     RegistroOdontograma,
     SolicitacaoAnonimizacao,
+    TemplateMensagem,
     TermoConsentimento,
     Usuario,
 )
@@ -53,6 +56,7 @@ from .serializers import (
     IndisponibilidadeDentistaSerializer,
     ItemOrcamentoSerializer,
     ItemPlanoTratamentoSerializer,
+    NotificacaoSerializer,
     OdontogramaSerializer,
     OrcamentoSerializer,
     PagamentoSerializer,
@@ -60,12 +64,14 @@ from .serializers import (
     ParcelaSerializer,
     PerfilUsuarioSerializer,
     PlanoTratamentoSerializer,
+    PreferenciaComunicacaoSerializer,
     ProcedimentoSerializer,
     ProntuarioPacienteSerializer,
     ReagendarAgendamentoSerializer,
     RegistroOdontogramaSerializer,
     RegistroUsuarioSerializer,
     SolicitacaoAnonimizacaoSerializer,
+    TemplateMensagemSerializer,
     TermoConsentimentoSerializer,
     UsuarioAdminSerializer,
 )
@@ -84,6 +90,7 @@ from .services import (
     validar_contexto_odontologico,
     validar_criacao_evolucao,
 )
+from .services_notification import cancelar_notificacoes, confirmar_presenca, criar_lembrete_consulta
 
 
 class ClinicaViewSet(viewsets.ModelViewSet):
@@ -1139,6 +1146,78 @@ class ConsentimentoPacienteViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(self.get_serializer(item).data)
 
 
+class TemplateMensagemViewSet(viewsets.ModelViewSet):
+    serializer_class = TemplateMensagemSerializer
+    queryset = TemplateMensagem.objects.none()
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        usuario = self.request.user
+        if usuario.is_staff:
+            return TemplateMensagem.objects.all()
+        if not usuario.clinica_id:
+            return TemplateMensagem.objects.none()
+        return TemplateMensagem.objects.filter(models.Q(clinica__isnull=True) | models.Q(clinica=usuario.clinica))
+
+    def perform_create(self, serializer):
+        if not self.request.user.is_staff:
+            raise PermissionDenied('Apenas staff/admin pode criar templates.')
+        serializer.save(criado_por=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        template = self.get_object()
+        if not request.user.is_staff:
+            raise PermissionDenied('Apenas staff/admin pode alterar templates.')
+        if template.publicado_em and {'corpo', 'assunto', 'canal'} & set(request.data):
+            raise ValidationError({'detail': 'Template publicado e imutavel; crie uma nova versao.'})
+        return super().update(request, *args, **kwargs)
+
+
+class NotificacaoViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = NotificacaoSerializer
+    queryset = Notificacao.objects.none()
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        usuario = self.request.user
+        queryset = Notificacao.objects.select_related('clinica', 'paciente', 'template')
+        if usuario.is_staff:
+            return queryset
+        if not usuario.clinica_id:
+            return queryset.none()
+        if usuario.tipo == 'PACIENTE':
+            return queryset.filter(clinica=usuario.clinica, paciente=usuario)
+        if usuario.tipo == 'DENTISTA':
+            return queryset.filter(clinica=usuario.clinica)
+        return queryset.none()
+
+
+class PreferenciaComunicacaoViewSet(viewsets.ModelViewSet):
+    serializer_class = PreferenciaComunicacaoSerializer
+    queryset = PreferenciaComunicacao.objects.none()
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'patch', 'head', 'options']
+
+    def get_queryset(self):
+        usuario = self.request.user
+        if usuario.is_staff:
+            return PreferenciaComunicacao.objects.select_related('paciente')
+        if usuario.tipo == 'PACIENTE':
+            PreferenciaComunicacao.objects.get_or_create(paciente=usuario)
+            return PreferenciaComunicacao.objects.filter(paciente=usuario)
+        return PreferenciaComunicacao.objects.none()
+
+    def update(self, request, *args, **kwargs):
+        item = self.get_object()
+        if not request.user.is_staff and item.paciente != request.user:
+            raise NotFound()
+        if not request.user.is_staff and 'paciente' in request.data:
+            raise ValidationError({'paciente': 'Paciente e imutavel.'})
+        return super().update(request, *args, **kwargs)
+
+    partial_update = update
+
+
 class AgendamentoViewSet(viewsets.ModelViewSet):
     queryset = Agendamento.objects.none()
     serializer_class = AgendamentoSerializer
@@ -1180,11 +1259,12 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         usuario_logado = self.request.user
         if usuario_logado.is_staff:
-            serializer.save()
+            agendamento = serializer.save()
         elif not usuario_logado.clinica_id:
             raise PermissionDenied('Usuario sem clinica vinculada.')
         else:
-            serializer.save(paciente=usuario_logado, clinica=usuario_logado.clinica)
+            agendamento = serializer.save(paciente=usuario_logado, clinica=usuario_logado.clinica)
+        criar_lembrete_consulta(agendamento, usuario=usuario_logado)
 
     def _exigir_profissional_ou_staff(self, request):
         if request.user.is_staff or request.user.tipo == 'DENTISTA':
@@ -1195,6 +1275,7 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def cancelar(self, request, pk=None):
         agendamento = cancelar_agendamento(self.get_object(), usuario=request.user)
+        cancelar_notificacoes(agendamento, usuario=request.user)
         return Response(self.get_serializer(agendamento).data)
 
     @extend_schema(request=None, responses=AgendamentoSerializer)
@@ -1225,4 +1306,13 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
         serializer = ReagendarAgendamentoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         agendamento = reagendar_agendamento(agendamento, serializer.validated_data['data_horario'])
+        cancelar_notificacoes(agendamento, usuario=request.user)
+        criar_lembrete_consulta(agendamento, usuario=request.user)
+        return Response(self.get_serializer(agendamento).data)
+
+    @extend_schema(request=None, responses=AgendamentoSerializer)
+    @action(detail=True, methods=['post'], url_path='confirmar-presenca')
+    def confirmar_presenca(self, request, pk=None):
+        self._exigir_profissional_ou_staff(request)
+        agendamento = confirmar_presenca(self.get_object(), usuario=request.user)
         return Response(self.get_serializer(agendamento).data)

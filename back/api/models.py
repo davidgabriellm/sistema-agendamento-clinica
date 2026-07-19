@@ -12,7 +12,9 @@ from django.utils.text import slugify
 def caminho_arquivo_clinico(instance, filename):
     """Keep user supplied names out of storage paths and make names unguessable."""
     extensao = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'bin'
-    return f'arquivos-clinicos/clinica-{instance.clinica_id}/paciente-{instance.paciente_id}/{uuid.uuid4().hex}.{extensao}'
+    return (
+        f'arquivos-clinicos/clinica-{instance.clinica_id}/paciente-{instance.paciente_id}/{uuid.uuid4().hex}.{extensao}'
+    )
 
 
 class Clinica(models.Model):
@@ -44,7 +46,7 @@ class Clinica(models.Model):
                 queryset = queryset.exclude(pk=self.pk)
             while queryset.filter(slug=candidato).exists():
                 sufixo = f'-{contador}'
-                candidato = f'{base[:120 - len(sufixo)]}{sufixo}'
+                candidato = f'{base[: 120 - len(sufixo)]}{sufixo}'
                 contador += 1
             self.slug = candidato
         super().save(*args, **kwargs)
@@ -131,7 +133,11 @@ class Usuario(AbstractUser):
     def idade(self):
         if self.data_nascimento:
             hoje = date.today()
-            return hoje.year - self.data_nascimento.year - ((hoje.month, hoje.day) < (self.data_nascimento.month, self.data_nascimento.day))
+            return (
+                hoje.year
+                - self.data_nascimento.year
+                - ((hoje.month, hoje.day) < (self.data_nascimento.month, self.data_nascimento.day))
+            )
         return None
 
     def get_full_name(self):
@@ -205,7 +211,7 @@ class Dentista(models.Model):
     disponibilidade = models.TextField(blank=True, null=True, help_text='Ex: Seg a Sex, 08h as 18h')
 
     def __str__(self):
-        return f"Dr(a). {self.usuario.get_full_name()} - {self.especialidade}"
+        return f'Dr(a). {self.usuario.get_full_name()} - {self.especialidade}'
 
 
 class IndisponibilidadeDentista(models.Model):
@@ -268,7 +274,9 @@ class Agendamento(models.Model):
     dentista = models.ForeignKey(Dentista, on_delete=models.CASCADE, related_name='agenda')
     paciente = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='meus_agendamentos')
     procedimento = models.CharField(max_length=150)
-    procedimento_ref = models.ForeignKey(Procedimento, on_delete=models.PROTECT, related_name='agendamentos', null=True, blank=True)
+    procedimento_ref = models.ForeignKey(
+        Procedimento, on_delete=models.PROTECT, related_name='agendamentos', null=True, blank=True
+    )
 
     data_horario = models.DateTimeField(help_text='Data e hora da consulta')
     data_hora_fim = models.DateTimeField(null=True, blank=True)
@@ -285,7 +293,7 @@ class Agendamento(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.paciente} com {self.dentista} em {self.data_horario}"
+        return f'{self.paciente} com {self.dentista} em {self.data_horario}'
 
 
 class ProntuarioPaciente(models.Model):
@@ -332,9 +340,13 @@ class Anamnese(models.Model):
     consumo_alcool = models.BooleanField(null=True, blank=True)
     observacoes = models.TextField(blank=True)
     preenchida_em = models.DateTimeField(auto_now_add=True)
-    preenchida_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, related_name='anamneses_preenchidas', null=True, blank=True)
+    preenchida_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, related_name='anamneses_preenchidas', null=True, blank=True
+    )
     atualizada_em = models.DateTimeField(auto_now=True)
-    atualizada_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, related_name='anamneses_atualizadas', null=True, blank=True)
+    atualizada_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, related_name='anamneses_atualizadas', null=True, blank=True
+    )
 
     def __str__(self):
         return f'Anamnese de {self.prontuario.paciente}'
@@ -347,7 +359,9 @@ class EvolucaoClinica(models.Model):
     descricao = models.TextField()
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
-    criado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, related_name='evolucoes_criadas', null=True, blank=True)
+    criado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, related_name='evolucoes_criadas', null=True, blank=True
+    )
 
     class Meta:
         ordering = ['-criado_em']
@@ -366,24 +380,48 @@ class Odontograma(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
     criado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='odontogramas_criados')
-    atualizado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='odontogramas_atualizados')
+    atualizado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name='odontogramas_atualizados'
+    )
     ativo = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['prontuario__paciente__nome_completo']
-        constraints = [models.UniqueConstraint(fields=['prontuario', 'ativo'], name='odontograma_ativo_unico_por_prontuario')]
+        constraints = [
+            models.UniqueConstraint(fields=['prontuario', 'ativo'], name='odontograma_ativo_unico_por_prontuario')
+        ]
 
 
 class RegistroOdontograma(models.Model):
-    FACE_CHOICES = [(valor, valor.replace('_', ' ').title()) for valor in ('VESTIBULAR', 'LINGUAL', 'PALATINA', 'MESIAL', 'DISTAL', 'OCLUSAL', 'INCISAL', 'GERAL')]
-    CONDICAO_CHOICES = [(valor, valor.replace('_', ' ').title()) for valor in ('SAUDAVEL', 'CARIE', 'RESTAURADO', 'AUSENTE', 'FRATURADO', 'IMPLANTE', 'COROA', 'TRATAMENTO_CANAL', 'EXTRACAO_INDICADA', 'PROTESE', 'OUTRO')]
+    FACE_CHOICES = [
+        (valor, valor.replace('_', ' ').title())
+        for valor in ('VESTIBULAR', 'LINGUAL', 'PALATINA', 'MESIAL', 'DISTAL', 'OCLUSAL', 'INCISAL', 'GERAL')
+    ]
+    CONDICAO_CHOICES = [
+        (valor, valor.replace('_', ' ').title())
+        for valor in (
+            'SAUDAVEL',
+            'CARIE',
+            'RESTAURADO',
+            'AUSENTE',
+            'FRATURADO',
+            'IMPLANTE',
+            'COROA',
+            'TRATAMENTO_CANAL',
+            'EXTRACAO_INDICADA',
+            'PROTESE',
+            'OUTRO',
+        )
+    ]
     odontograma = models.ForeignKey(Odontograma, on_delete=models.PROTECT, related_name='registros')
     numero_dente = models.PositiveSmallIntegerField()
     face = models.CharField(max_length=20, choices=FACE_CHOICES)
     condicao = models.CharField(max_length=25, choices=CONDICAO_CHOICES)
     observacao = models.TextField(blank=True)
     dentista = models.ForeignKey(Dentista, on_delete=models.PROTECT, related_name='registros_odontograma')
-    criado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='registros_odontograma_criados')
+    criado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name='registros_odontograma_criados'
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
     ativo = models.BooleanField(default=True)
@@ -393,13 +431,18 @@ class RegistroOdontograma(models.Model):
 
 
 class PlanoTratamento(models.Model):
-    STATUS_CHOICES = [(v, v.replace('_', ' ').title()) for v in ('RASCUNHO', 'PROPOSTO', 'APROVADO', 'EM_ANDAMENTO', 'CONCLUIDO', 'CANCELADO')]
+    STATUS_CHOICES = [
+        (v, v.replace('_', ' ').title())
+        for v in ('RASCUNHO', 'PROPOSTO', 'APROVADO', 'EM_ANDAMENTO', 'CONCLUIDO', 'CANCELADO')
+    ]
     clinica = models.ForeignKey(Clinica, on_delete=models.PROTECT, related_name='planos_tratamento')
     prontuario = models.ForeignKey(ProntuarioPaciente, on_delete=models.PROTECT, related_name='planos_tratamento')
     titulo = models.CharField(max_length=150)
     descricao = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='RASCUNHO')
-    criado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='planos_tratamento_criados')
+    criado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name='planos_tratamento_criados'
+    )
     aprovado_em = models.DateTimeField(null=True, blank=True)
     concluido_em = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -414,7 +457,9 @@ class ItemPlanoTratamento(models.Model):
     STATUS_CHOICES = [(v, v.replace('_', ' ').title()) for v in ('PENDENTE', 'EM_ANDAMENTO', 'CONCLUIDO', 'CANCELADO')]
     PRIORIDADE_CHOICES = [(v, v.title()) for v in ('BAIXA', 'MEDIA', 'ALTA', 'URGENTE')]
     plano = models.ForeignKey(PlanoTratamento, on_delete=models.PROTECT, related_name='itens')
-    procedimento_ref = models.ForeignKey(Procedimento, on_delete=models.PROTECT, null=True, blank=True, related_name='itens_plano')
+    procedimento_ref = models.ForeignKey(
+        Procedimento, on_delete=models.PROTECT, null=True, blank=True, related_name='itens_plano'
+    )
     descricao = models.TextField()
     numero_dente = models.PositiveSmallIntegerField(null=True, blank=True)
     face = models.CharField(max_length=20, choices=RegistroOdontograma.FACE_CHOICES, null=True, blank=True)
@@ -435,7 +480,9 @@ class Orcamento(models.Model):
     DESCONTO_CHOICES = [(v, v.title()) for v in ('NENHUM', 'VALOR', 'PERCENTUAL')]
     clinica = models.ForeignKey(Clinica, on_delete=models.PROTECT, related_name='orcamentos')
     paciente = models.ForeignKey(Usuario, on_delete=models.PROTECT, related_name='orcamentos')
-    plano_tratamento = models.ForeignKey(PlanoTratamento, on_delete=models.PROTECT, null=True, blank=True, related_name='orcamentos')
+    plano_tratamento = models.ForeignKey(
+        PlanoTratamento, on_delete=models.PROTECT, null=True, blank=True, related_name='orcamentos'
+    )
     titulo = models.CharField(max_length=150)
     descricao = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='RASCUNHO')
@@ -461,8 +508,12 @@ class Orcamento(models.Model):
 
 class ItemOrcamento(models.Model):
     orcamento = models.ForeignKey(Orcamento, on_delete=models.PROTECT, related_name='itens')
-    item_plano_tratamento = models.ForeignKey(ItemPlanoTratamento, on_delete=models.PROTECT, null=True, blank=True, related_name='itens_orcamento')
-    procedimento_ref = models.ForeignKey(Procedimento, on_delete=models.PROTECT, null=True, blank=True, related_name='itens_orcamento')
+    item_plano_tratamento = models.ForeignKey(
+        ItemPlanoTratamento, on_delete=models.PROTECT, null=True, blank=True, related_name='itens_orcamento'
+    )
+    procedimento_ref = models.ForeignKey(
+        Procedimento, on_delete=models.PROTECT, null=True, blank=True, related_name='itens_orcamento'
+    )
     descricao = models.TextField()
     quantidade = models.PositiveSmallIntegerField(default=1)
     valor_unitario = models.DecimalField(max_digits=12, decimal_places=2)
@@ -491,11 +542,16 @@ class Parcela(models.Model):
 
     class Meta:
         ordering = ['numero']
-        constraints = [models.UniqueConstraint(fields=['orcamento', 'numero'], name='parcela_numero_unico_por_orcamento')]
+        constraints = [
+            models.UniqueConstraint(fields=['orcamento', 'numero'], name='parcela_numero_unico_por_orcamento')
+        ]
 
 
 class Pagamento(models.Model):
-    FORMAS_CHOICES = [(v, v.replace('_', ' ').title()) for v in ('DINHEIRO', 'PIX', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'TRANSFERENCIA', 'OUTRO')]
+    FORMAS_CHOICES = [
+        (v, v.replace('_', ' ').title())
+        for v in ('DINHEIRO', 'PIX', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'TRANSFERENCIA', 'OUTRO')
+    ]
     clinica = models.ForeignKey(Clinica, on_delete=models.PROTECT, related_name='pagamentos')
     paciente = models.ForeignKey(Usuario, on_delete=models.PROTECT, related_name='pagamentos')
     orcamento = models.ForeignKey(Orcamento, on_delete=models.PROTECT, related_name='pagamentos')
@@ -505,21 +561,36 @@ class Pagamento(models.Model):
     pago_em = models.DateTimeField(default=timezone.now)
     observacao = models.TextField(blank=True)
     referencia_externa = models.CharField(max_length=100, blank=True, null=True)
-    registrado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='pagamentos_registrados')
+    registrado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name='pagamentos_registrados'
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
     ativo = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['-pago_em', '-id']
-        constraints = [models.UniqueConstraint(fields=['clinica', 'referencia_externa'], condition=models.Q(referencia_externa__isnull=False), name='pagamento_referencia_unica_por_clinica')]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['clinica', 'referencia_externa'],
+                condition=models.Q(referencia_externa__isnull=False),
+                name='pagamento_referencia_unica_por_clinica',
+            )
+        ]
 
 
 class ArquivoClinico(models.Model):
-    CATEGORIA_CHOICES = [(v, v.title()) for v in ('RADIOGRAFIA', 'EXAME', 'FOTOGRAFIA', 'DOCUMENTO', 'RECEITA', 'ATESTADO', 'CONSENTIMENTO', 'OUTRO')]
+    CATEGORIA_CHOICES = [
+        (v, v.title())
+        for v in ('RADIOGRAFIA', 'EXAME', 'FOTOGRAFIA', 'DOCUMENTO', 'RECEITA', 'ATESTADO', 'CONSENTIMENTO', 'OUTRO')
+    ]
     clinica = models.ForeignKey(Clinica, on_delete=models.PROTECT, related_name='arquivos_clinicos')
     paciente = models.ForeignKey(Usuario, on_delete=models.PROTECT, related_name='arquivos_clinicos')
-    prontuario = models.ForeignKey(ProntuarioPaciente, on_delete=models.PROTECT, null=True, blank=True, related_name='arquivos_clinicos')
-    agendamento = models.ForeignKey(Agendamento, on_delete=models.PROTECT, null=True, blank=True, related_name='arquivos_clinicos')
+    prontuario = models.ForeignKey(
+        ProntuarioPaciente, on_delete=models.PROTECT, null=True, blank=True, related_name='arquivos_clinicos'
+    )
+    agendamento = models.ForeignKey(
+        Agendamento, on_delete=models.PROTECT, null=True, blank=True, related_name='arquivos_clinicos'
+    )
     categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES)
     arquivo = models.FileField(upload_to=caminho_arquivo_clinico)
     nome_original = models.CharField(max_length=255, editable=False)
@@ -529,7 +600,9 @@ class ArquivoClinico(models.Model):
     descricao = models.TextField(blank=True)
     hash_sha256 = models.CharField(max_length=64, editable=False)
     liberado_paciente = models.BooleanField(default=True)
-    enviado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='arquivos_clinicos_enviados')
+    enviado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name='arquivos_clinicos_enviados'
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
     ativo = models.BooleanField(default=True)
@@ -554,7 +627,9 @@ class AcessoArquivoClinico(models.Model):
 
 
 class TermoConsentimento(models.Model):
-    clinica = models.ForeignKey(Clinica, on_delete=models.CASCADE, null=True, blank=True, related_name='termos_consentimento')
+    clinica = models.ForeignKey(
+        Clinica, on_delete=models.CASCADE, null=True, blank=True, related_name='termos_consentimento'
+    )
     titulo = models.CharField(max_length=255)
     codigo = models.SlugField(max_length=100)
     versao = models.PositiveIntegerField()
@@ -563,7 +638,9 @@ class TermoConsentimento(models.Model):
     obrigatorio = models.BooleanField(default=False)
     ativo = models.BooleanField(default=True)
     publicado_em = models.DateTimeField(null=True, blank=True)
-    criado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='termos_consentimento_criados')
+    criado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name='termos_consentimento_criados'
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
@@ -581,7 +658,9 @@ class ConsentimentoPaciente(models.Model):
     revogado_em = models.DateTimeField(null=True, blank=True)
     ip = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=512, blank=True)
-    registrado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='consentimentos_registrados')
+    registrado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name='consentimentos_registrados'
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -596,7 +675,91 @@ class SolicitacaoAnonimizacao(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='SOLICITADA')
     solicitado_em = models.DateTimeField(auto_now_add=True)
     processado_em = models.DateTimeField(null=True, blank=True)
-    processado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='anonimizacoes_processadas')
+    processado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='anonimizacoes_processadas'
+    )
 
     class Meta:
         ordering = ['-solicitado_em']
+
+
+class TemplateMensagem(models.Model):
+    CANAL_CHOICES = [(v, v.title()) for v in ('WHATSAPP', 'EMAIL', 'SMS', 'PUSH', 'INTERNO')]
+    clinica = models.ForeignKey(
+        Clinica, on_delete=models.CASCADE, null=True, blank=True, related_name='templates_mensagem'
+    )
+    nome = models.CharField(max_length=150)
+    codigo = models.SlugField(max_length=100)
+    canal = models.CharField(max_length=12, choices=CANAL_CHOICES)
+    versao = models.PositiveIntegerField(default=1)
+    assunto = models.CharField(max_length=255, blank=True)
+    corpo = models.TextField()
+    ativo = models.BooleanField(default=True)
+    publicado_em = models.DateTimeField(null=True, blank=True)
+    criado_por = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, related_name='templates_mensagem_criados'
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['codigo', '-versao']
+        constraints = [models.UniqueConstraint(fields=['codigo', 'versao'], name='template_codigo_versao_unico')]
+
+
+class PreferenciaComunicacao(models.Model):
+    paciente = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='preferencias_comunicacao')
+    aceita_whatsapp = models.BooleanField(default=True)
+    aceita_email = models.BooleanField(default=True)
+    aceita_sms = models.BooleanField(default=False)
+    aceita_push = models.BooleanField(default=False)
+    aceita_marketing = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['paciente_id']
+
+
+class Notificacao(models.Model):
+    CANAL_CHOICES = TemplateMensagem.CANAL_CHOICES
+    STATUS_CHOICES = [(v, v.title()) for v in ('PENDENTE', 'PROCESSANDO', 'ENVIADA', 'ERRO', 'CANCELADA')]
+    clinica = models.ForeignKey(Clinica, on_delete=models.PROTECT, related_name='notificacoes')
+    paciente = models.ForeignKey(Usuario, on_delete=models.PROTECT, related_name='notificacoes')
+    agendamento = models.ForeignKey(
+        Agendamento, on_delete=models.PROTECT, null=True, blank=True, related_name='notificacoes'
+    )
+    orcamento = models.ForeignKey(
+        Orcamento, on_delete=models.PROTECT, null=True, blank=True, related_name='notificacoes'
+    )
+    template = models.ForeignKey(
+        TemplateMensagem, on_delete=models.PROTECT, null=True, blank=True, related_name='notificacoes'
+    )
+    canal = models.CharField(max_length=12, choices=CANAL_CHOICES)
+    assunto = models.CharField(max_length=255, blank=True)
+    mensagem = models.TextField()
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='PENDENTE')
+    erro = models.TextField(blank=True)
+    agendada_para = models.DateTimeField()
+    enviada_em = models.DateTimeField(null=True, blank=True)
+    criada_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='notificacoes_criadas')
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['agendada_para', 'id']
+        indexes = [models.Index(fields=['clinica', 'paciente', 'status', 'agendada_para'])]
+
+
+class EventoNotificacao(models.Model):
+    ACAO_CHOICES = [(v, v.title()) for v in ('CRIACAO', 'CANCELAMENTO', 'CONFIRMACAO', 'TENTATIVA_ENVIO', 'ERRO_ENVIO')]
+    notificacao = models.ForeignKey(Notificacao, on_delete=models.PROTECT, related_name='eventos')
+    usuario = models.ForeignKey(
+        Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='eventos_notificacao'
+    )
+    acao = models.CharField(max_length=20, choices=ACAO_CHOICES)
+    detalhes = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criado_em']

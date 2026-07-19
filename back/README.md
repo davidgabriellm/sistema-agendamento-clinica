@@ -253,6 +253,18 @@ docker compose run --rm -e USE_SQLITE_FOR_TESTS=False backend python manage.py t
 
 Retorna apenas estado basico da aplicacao e do banco, sem expor segredos.
 
+## Notificacoes
+
+A Sprint 13 registra notificacoes e lembretes de consulta de forma sincrona, sem enviar mensagens a provedores externos.
+
+Arquitetura atual: `Agenda -> NotificationService -> Banco de Dados -> Historico`.
+
+Ao criar uma consulta, sao registrados lembretes pendentes para 24 h e 2 h antes. Reagendamentos cancelam os pendentes anteriores e criam novos; cancelamentos tambem os cancelam. A confirmacao de presenca registra apenas o estado interno e a auditoria.
+
+Os endpoints sao `/api/v1/templates-mensagem/`, `/api/v1/notificacoes/`, `/api/v1/preferencias-comunicacao/` e `/api/v1/agendamentos/{id}/confirmar-presenca/`. Templates podem ser globais ou por clinica; pacientes veem apenas o proprio historico e alteram somente as proprias preferencias.
+
+Arquitetura futura planejada: `Agenda -> NotificationService -> Celery -> Redis -> Adaptadores -> WhatsApp/Email/SMS/Push`. Redis, Celery, Kafka, WhatsApp, Email, SMS e Push reais nao sao integrados nesta sprint.
+
 ## Arquivos clinicos, consentimento e privacidade
 
 - `POST/GET /api/v1/arquivos-clinicos/` recebe PDF, JPEG, PNG ou WEBP; o limite padrao e 10 MB e pode ser ajustado por `ARQUIVO_CLINICO_MAX_TAMANHO_BYTES`.

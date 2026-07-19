@@ -14,14 +14,17 @@ from .views import (
     IndisponibilidadeDentistaViewSet,
     ItemOrcamentoViewSet,
     ItemPlanoTratamentoViewSet,
+    NotificacaoViewSet,
     OdontogramaViewSet,
     OrcamentoViewSet,
     PagamentoViewSet,
     ParcelaViewSet,
     PlanoTratamentoViewSet,
+    PreferenciaComunicacaoViewSet,
     ProcedimentoViewSet,
     ProntuarioPacienteViewSet,
     RegistroOdontogramaViewSet,
+    TemplateMensagemViewSet,
     TermoConsentimentoViewSet,
     UsuarioViewSet,
 )
@@ -52,6 +55,9 @@ router.register(r'pagamentos', PagamentoViewSet, basename='pagamento')
 router.register(r'arquivos-clinicos', ArquivoClinicoViewSet, basename='arquivo-clinico')
 router.register(r'termos-consentimento', TermoConsentimentoViewSet, basename='termo-consentimento')
 router.register(r'consentimentos', ConsentimentoPacienteViewSet, basename='consentimento')
+router.register(r'templates-mensagem', TemplateMensagemViewSet, basename='template-mensagem')
+router.register(r'notificacoes', NotificacaoViewSet, basename='notificacao')
+router.register(r'preferencias-comunicacao', PreferenciaComunicacaoViewSet, basename='preferencia-comunicacao')
 
 urlpatterns = [
     path('', include(router.urls)),

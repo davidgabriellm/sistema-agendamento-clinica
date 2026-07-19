@@ -50,22 +50,49 @@ class ArquivosConsentimentosTest(APITestCase):
         self.outra = Clinica.objects.create(nome='Outra Clinica LGPD')
         self.staff = usuario('staff_lgpd', '95000000001', 'staff.lgpd@example.com', self.clinica, 'ADMIN', True)
         self.paciente = usuario('paciente_lgpd', '95000000002', 'paciente.lgpd@example.com', self.clinica)
-        self.paciente_mesma_clinica = usuario('paciente_lgpd_2', '95000000003', 'paciente2.lgpd@example.com', self.clinica)
+        self.paciente_mesma_clinica = usuario(
+            'paciente_lgpd_2', '95000000003', 'paciente2.lgpd@example.com', self.clinica
+        )
         self.outro = usuario('outro_lgpd', '95000000004', 'outro.lgpd@example.com', self.outra)
-        self.dentista_usuario = usuario('dentista_lgpd', '95000000005', 'dentista.lgpd@example.com', self.clinica, 'DENTISTA')
-        self.dentista_outro = usuario('dentista_lgpd_b', '95000000006', 'dentista.b.lgpd@example.com', self.outra, 'DENTISTA')
-        self.dentista = Dentista.objects.create(clinica=self.clinica, usuario=self.dentista_usuario, especialidade='Clinico', cro='95001-AL')
-        Dentista.objects.create(clinica=self.outra, usuario=self.dentista_outro, especialidade='Clinico', cro='95002-AL')
-        self.prontuario = ProntuarioPaciente.objects.create(clinica=self.clinica, paciente=self.paciente, criado_por=self.staff)
-        self.prontuario_outro = ProntuarioPaciente.objects.create(clinica=self.outra, paciente=self.outro, criado_por=self.staff)
+        self.dentista_usuario = usuario(
+            'dentista_lgpd', '95000000005', 'dentista.lgpd@example.com', self.clinica, 'DENTISTA'
+        )
+        self.dentista_outro = usuario(
+            'dentista_lgpd_b', '95000000006', 'dentista.b.lgpd@example.com', self.outra, 'DENTISTA'
+        )
+        self.dentista = Dentista.objects.create(
+            clinica=self.clinica, usuario=self.dentista_usuario, especialidade='Clinico', cro='95001-AL'
+        )
+        Dentista.objects.create(
+            clinica=self.outra, usuario=self.dentista_outro, especialidade='Clinico', cro='95002-AL'
+        )
+        self.prontuario = ProntuarioPaciente.objects.create(
+            clinica=self.clinica, paciente=self.paciente, criado_por=self.staff
+        )
+        self.prontuario_outro = ProntuarioPaciente.objects.create(
+            clinica=self.outra, paciente=self.outro, criado_por=self.staff
+        )
         inicio = timezone.now() + timedelta(days=1)
-        self.agendamento = Agendamento.objects.create(clinica=self.clinica, dentista=self.dentista, paciente=self.paciente, procedimento='Consulta', data_horario=inicio, data_hora_fim=inicio + timedelta(minutes=30), duracao_minutos=30)
+        self.agendamento = Agendamento.objects.create(
+            clinica=self.clinica,
+            dentista=self.dentista,
+            paciente=self.paciente,
+            procedimento='Consulta',
+            data_horario=inicio,
+            data_hora_fim=inicio + timedelta(minutes=30),
+            duracao_minutos=30,
+        )
 
     def arquivo_pdf(self, nome='exame.pdf', conteudo=b'%PDF-1.4 teste', mime='application/pdf'):
         return SimpleUploadedFile(nome, conteudo, content_type=mime)
 
     def enviar_arquivo(self, **dados):
-        payload = {'paciente': self.paciente.id, 'categoria': 'EXAME', 'liberado_paciente': True, 'arquivo': self.arquivo_pdf()}
+        payload = {
+            'paciente': self.paciente.id,
+            'categoria': 'EXAME',
+            'liberado_paciente': True,
+            'arquivo': self.arquivo_pdf(),
+        }
         payload.update(dados)
         self.client.force_authenticate(self.staff)
         return self.client.post('/api/v1/arquivos-clinicos/', payload, format='multipart')
@@ -85,7 +112,11 @@ class ArquivosConsentimentosTest(APITestCase):
         resposta = self.client.get(f'/api/v1/arquivos-clinicos/{envio.data["id"]}/download/', HTTP_USER_AGENT='teste')
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(resposta['X-Content-Type-Options'], 'nosniff')
-        self.assertTrue(AcessoArquivoClinico.objects.filter(arquivo_id=envio.data['id'], usuario=self.paciente, acao='DOWNLOAD').exists())
+        self.assertTrue(
+            AcessoArquivoClinico.objects.filter(
+                arquivo_id=envio.data['id'], usuario=self.paciente, acao='DOWNLOAD'
+            ).exists()
+        )
         resposta.close()
 
     def test_upload_rejeita_vazio_limite_mime_extensao_nome_duplo_e_executavel(self):
@@ -109,35 +140,73 @@ class ArquivosConsentimentosTest(APITestCase):
         self.assertFalse(list(Path(settings.MEDIA_ROOT).rglob('*')))
 
     def test_rejeita_prontuario_e_agendamento_incompativeis(self):
-        self.assertEqual(self.enviar_arquivo(prontuario=self.prontuario_outro.id).status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self.enviar_arquivo(prontuario=self.prontuario_outro.id).status_code, status.HTTP_400_BAD_REQUEST
+        )
         inicio = timezone.now() + timedelta(days=2)
-        agendamento_outro = Agendamento.objects.create(clinica=self.outra, dentista=Dentista.objects.get(usuario=self.dentista_outro), paciente=self.outro, procedimento='Consulta', data_horario=inicio, data_hora_fim=inicio + timedelta(minutes=30), duracao_minutos=30)
+        agendamento_outro = Agendamento.objects.create(
+            clinica=self.outra,
+            dentista=Dentista.objects.get(usuario=self.dentista_outro),
+            paciente=self.outro,
+            procedimento='Consulta',
+            data_horario=inicio,
+            data_hora_fim=inicio + timedelta(minutes=30),
+            duracao_minutos=30,
+        )
         self.assertEqual(self.enviar_arquivo(agendamento=agendamento_outro.id).status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_isolamento_paciente_e_dentista_outra_clinica(self):
         arquivo = self.enviar_arquivo().data
         self.client.force_authenticate(self.paciente_mesma_clinica)
-        self.assertEqual(self.client.get(f'/api/v1/arquivos-clinicos/{arquivo["id"]}/download/').status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            self.client.get(f'/api/v1/arquivos-clinicos/{arquivo["id"]}/download/').status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
         self.client.force_authenticate(self.dentista_outro)
-        self.assertEqual(self.client.get(f'/api/v1/arquivos-clinicos/{arquivo["id"]}/').status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            self.client.get(f'/api/v1/arquivos-clinicos/{arquivo["id"]}/').status_code, status.HTTP_404_NOT_FOUND
+        )
 
     def test_vinculos_criticos_sao_imutaveis_e_desativado_nao_baixa(self):
         arquivo = self.enviar_arquivo().data
         self.client.force_authenticate(self.staff)
-        for campo, valor in {'clinica': self.outra.id, 'paciente': self.outro.id, 'hash_sha256': '0' * 64, 'enviado_por': self.outro.id, 'prontuario': self.prontuario_outro.id}.items():
-            self.assertEqual(self.client.patch(f'/api/v1/arquivos-clinicos/{arquivo["id"]}/', {campo: valor}, format='json').status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.client.post(f'/api/v1/arquivos-clinicos/{arquivo["id"]}/desativar/').status_code, status.HTTP_200_OK)
+        for campo, valor in {
+            'clinica': self.outra.id,
+            'paciente': self.outro.id,
+            'hash_sha256': '0' * 64,
+            'enviado_por': self.outro.id,
+            'prontuario': self.prontuario_outro.id,
+        }.items():
+            self.assertEqual(
+                self.client.patch(
+                    f'/api/v1/arquivos-clinicos/{arquivo["id"]}/', {campo: valor}, format='json'
+                ).status_code,
+                status.HTTP_400_BAD_REQUEST,
+            )
+        self.assertEqual(
+            self.client.post(f'/api/v1/arquivos-clinicos/{arquivo["id"]}/desativar/').status_code, status.HTTP_200_OK
+        )
         self.client.force_authenticate(self.paciente)
-        self.assertEqual(self.client.get(f'/api/v1/arquivos-clinicos/{arquivo["id"]}/download/').status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            self.client.get(f'/api/v1/arquivos-clinicos/{arquivo["id"]}/download/').status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
 
     def test_termo_inativo_duplicado_e_aceite_de_outro_paciente(self):
         inativo = self.criar_termo(codigo='inativo', ativo=False)
         self.client.force_authenticate(self.paciente)
-        self.assertEqual(self.client.post(f'/api/v1/termos-consentimento/{inativo.data["id"]}/aceitar/').status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            self.client.post(f'/api/v1/termos-consentimento/{inativo.data["id"]}/aceitar/').status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
         termo = self.criar_termo(codigo='duplicado')
         self.assertEqual(self.criar_termo(codigo='duplicado').status_code, status.HTTP_400_BAD_REQUEST)
         self.client.force_authenticate(self.paciente)
-        aceite = self.client.post(f'/api/v1/termos-consentimento/{termo.data["id"]}/aceitar/', {'paciente': self.paciente_mesma_clinica.id}, format='json')
+        aceite = self.client.post(
+            f'/api/v1/termos-consentimento/{termo.data["id"]}/aceitar/',
+            {'paciente': self.paciente_mesma_clinica.id},
+            format='json',
+        )
         self.assertEqual(aceite.status_code, status.HTTP_201_CREATED)
         self.assertEqual(aceite.data['paciente'], self.paciente.id)
 
@@ -145,19 +214,33 @@ class ArquivosConsentimentosTest(APITestCase):
         termo = self.criar_termo(codigo='exportacao')
         self.client.force_authenticate(self.paciente)
         aceite = self.client.post(f'/api/v1/termos-consentimento/{termo.data["id"]}/aceitar/')
-        self.assertEqual(self.client.post(f'/api/v1/consentimentos/{aceite.data["id"]}/revogar/').status_code, status.HTTP_200_OK)
-        self.assertEqual(self.client.post(f'/api/v1/consentimentos/{aceite.data["id"]}/revogar/').status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self.client.post(f'/api/v1/consentimentos/{aceite.data["id"]}/revogar/').status_code, status.HTTP_200_OK
+        )
+        self.assertEqual(
+            self.client.post(f'/api/v1/consentimentos/{aceite.data["id"]}/revogar/').status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
         exportacao = self.client.post(f'/api/v1/usuarios/{self.paciente.id}/exportar-dados/')
         self.assertEqual(exportacao.status_code, status.HTTP_200_OK)
         texto = str(exportacao.data).lower()
         self.assertNotIn('password', texto)
         self.assertNotIn('secret_key', texto)
         self.assertNotIn('token', texto)
-        self.assertEqual(self.client.post(f'/api/v1/usuarios/{self.outro.id}/exportar-dados/').status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            self.client.post(f'/api/v1/usuarios/{self.outro.id}/exportar-dados/').status_code, status.HTTP_404_NOT_FOUND
+        )
 
     def test_anonimizacao_de_outro_usuario_e_bloqueada(self):
         self.client.force_authenticate(self.paciente)
-        self.assertEqual(self.client.post(f'/api/v1/usuarios/{self.outro.id}/solicitar-anonimizacao/', {'motivo': 'teste'}, format='json').status_code, status.HTTP_404_NOT_FOUND)
-        resposta = self.client.post(f'/api/v1/usuarios/{self.paciente.id}/solicitar-anonimizacao/', {'motivo': 'teste'}, format='json')
+        self.assertEqual(
+            self.client.post(
+                f'/api/v1/usuarios/{self.outro.id}/solicitar-anonimizacao/', {'motivo': 'teste'}, format='json'
+            ).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        resposta = self.client.post(
+            f'/api/v1/usuarios/{self.paciente.id}/solicitar-anonimizacao/', {'motivo': 'teste'}, format='json'
+        )
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
         self.assertEqual(SolicitacaoAnonimizacao.objects.filter(paciente=self.paciente).count(), 1)

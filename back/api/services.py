@@ -233,8 +233,10 @@ def validar_criacao_evolucao(*, prontuario, agendamento, dentista):
 
 NUMEROS_DENTES_FDI = set(range(11, 19)) | set(range(21, 29)) | set(range(31, 39)) | set(range(41, 49))
 TRANSICOES_PLANO = {
-    'RASCUNHO': {'PROPOSTO'}, 'PROPOSTO': {'APROVADO', 'CANCELADO'},
-    'APROVADO': {'EM_ANDAMENTO', 'CANCELADO'}, 'EM_ANDAMENTO': {'CONCLUIDO', 'CANCELADO'},
+    'RASCUNHO': {'PROPOSTO'},
+    'PROPOSTO': {'APROVADO', 'CANCELADO'},
+    'APROVADO': {'EM_ANDAMENTO', 'CANCELADO'},
+    'EM_ANDAMENTO': {'CONCLUIDO', 'CANCELADO'},
 }
 
 
@@ -287,7 +289,12 @@ def recalcular_orcamento(orcamento):
     pago = dinheiro(sum((p.valor for p in orcamento.pagamentos.filter(ativo=True)), Decimal('0')))
     if desconto > subtotal:
         raise ValidationError({'desconto_valor': 'Desconto nao pode ser maior que o subtotal.'})
-    orcamento.subtotal, orcamento.total, orcamento.valor_pago, orcamento.saldo = subtotal, total, pago, dinheiro(total - pago)
+    orcamento.subtotal, orcamento.total, orcamento.valor_pago, orcamento.saldo = (
+        subtotal,
+        total,
+        pago,
+        dinheiro(total - pago),
+    )
     orcamento.save(update_fields=['subtotal', 'total', 'valor_pago', 'saldo', 'atualizado_em'])
     return orcamento
 
@@ -326,11 +333,19 @@ def gerar_parcelas(orcamento, quantidade, primeiro_vencimento, intervalo_dias=30
         if any(valor <= 0 for valor in valores):
             raise ValidationError({'quantidade_parcelas': 'Parcelamento gera parcela com valor zero.'})
         for numero, valor in enumerate(valores, 1):
-            Parcela.objects.create(clinica=orcamento.clinica, orcamento=orcamento, numero=numero, valor=valor, vencimento=primeiro_vencimento + timedelta(days=intervalo_dias * (numero - 1)))
+            Parcela.objects.create(
+                clinica=orcamento.clinica,
+                orcamento=orcamento,
+                numero=numero,
+                valor=valor,
+                vencimento=primeiro_vencimento + timedelta(days=intervalo_dias * (numero - 1)),
+            )
     return orcamento
 
 
-def registrar_pagamento(*, orcamento, parcela, valor, forma_pagamento, usuario, observacao='', referencia_externa=None, pago_em=None):
+def registrar_pagamento(
+    *, orcamento, parcela, valor, forma_pagamento, usuario, observacao='', referencia_externa=None, pago_em=None
+):
     with transaction.atomic():
         orcamento = Orcamento.objects.select_for_update().get(pk=orcamento.pk)
         if orcamento.status in {'CANCELADO', 'REJEITADO'}:
@@ -345,8 +360,22 @@ def registrar_pagamento(*, orcamento, parcela, valor, forma_pagamento, usuario, 
             pago_parcela = sum((p.valor for p in parcela.pagamentos.filter(ativo=True)), Decimal('0'))
             if valor > dinheiro(parcela.valor - pago_parcela):
                 raise ValidationError({'valor': 'Valor excede o saldo da parcela.'})
-        pagamento = Pagamento.objects.create(clinica=orcamento.clinica, paciente=orcamento.paciente, orcamento=orcamento, parcela=parcela, valor=valor, forma_pagamento=forma_pagamento, pago_em=pago_em or timezone.now(), observacao=observacao, referencia_externa=referencia_externa, registrado_por=usuario)
-        if parcela and dinheiro(sum((p.valor for p in parcela.pagamentos.filter(ativo=True)), Decimal('0'))) == parcela.valor:
+        pagamento = Pagamento.objects.create(
+            clinica=orcamento.clinica,
+            paciente=orcamento.paciente,
+            orcamento=orcamento,
+            parcela=parcela,
+            valor=valor,
+            forma_pagamento=forma_pagamento,
+            pago_em=pago_em or timezone.now(),
+            observacao=observacao,
+            referencia_externa=referencia_externa,
+            registrado_por=usuario,
+        )
+        if (
+            parcela
+            and dinheiro(sum((p.valor for p in parcela.pagamentos.filter(ativo=True)), Decimal('0'))) == parcela.valor
+        ):
             parcela.status, parcela.paga_em = 'PAGA', pagamento.pago_em
             parcela.save(update_fields=['status', 'paga_em', 'atualizado_em'])
         recalcular_orcamento(orcamento)
